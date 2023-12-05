@@ -17,7 +17,7 @@
 #include <my-lib/macros.h>
 #include <my-lib/any.h>
 #include <my-lib/math-matrix.h>
-#include <my-lib/math-vector.h>
+#include <my-lib/math-geometry.h>
 
 // ---------------------------------------------------
 
@@ -25,9 +25,14 @@ namespace Graphics
 {
 
 using fp_t = float;
+using Vector2 = Mylib::Math::Vector2f;
 using Vector3 = Mylib::Math::Vector3f;
-using Matrix4 = Mylib::Math::Matrix4f;
 using Vector4 = Mylib::Math::Vector4f;
+using Line = Mylib::Math::Line3f;
+using Matrix4 = Mylib::Math::Matrix4f;
+using Point2 = Vector2;
+using Point3 = Vector3;
+using Point4 = Vector4;
 using Vector = Vector3;
 using Point = Vector;
 
@@ -71,13 +76,25 @@ public:
 		return 8;
 	}
 
+	enum PositionIndex {
+		LeftTopFront,
+		LeftBottomFront,
+		RightTopFront,
+		RightBottomFront,
+		LeftTopBack,
+		LeftBottomBack,
+		RightTopBack,
+		RightBottomBack
+	};
+
 protected:
-	OO_ENCAPSULATE_SCALAR(fp_t, width)
-	OO_ENCAPSULATE_OBJ(std::array<Color, get_n_vertices()>, colors)
+	OO_ENCAPSULATE_SCALAR(fp_t, w) // width
+
+	std::array<Color, 8> colors;
 
 public:
-	Cube3d (const fp_t width_) noexcept
-		: Shape(Type::Cube3d), width(width_)
+	Cube3d (const fp_t w_) noexcept
+		: Shape(Type::Cube3d), w(w_)
 	{
 		//dprint( "circle created r=" << this->radius << std::endl )
 	}
@@ -86,12 +103,34 @@ public:
 		: Cube3d(0)
 	{
 	}
+
+	void set_vertex_color (const PositionIndex i, const Color& color) noexcept
+	{
+		//mylib_assert_exception(i < get_n_vertices())
+		this->colors[i] = color;
+	}
+
+	const Color& get_vertex_color (const PositionIndex i) const noexcept
+	{
+		//mylib_assert_exception(i < get_n_vertices())
+		return this->colors[i];
+	}
+
+	inline fp_t get_h () const noexcept
+	{
+		return this->w;
+	}
+
+	inline fp_t get_d () const noexcept
+	{
+		return this->w;
+	}
 };
 
 // ---------------------------------------------------
 
 struct RenderArgs {
-	Vector world_camera_focus;
+	Line world_camera;
 };
 
 // ---------------------------------------------------
@@ -113,6 +152,7 @@ protected:
 	OO_ENCAPSULATE_SCALAR_READONLY(uint32_t, window_height_px)
 	OO_ENCAPSULATE_SCALAR_READONLY(bool, fullscreen)
 	OO_ENCAPSULATE_SCALAR_READONLY(float, window_aspect_ratio)
+	OO_ENCAPSULATE_OBJ(Color, background_color)
 
 public:
 	inline Renderer (const uint32_t window_width_px_, const uint32_t window_height_px_, const bool fullscreen_)
@@ -126,14 +166,14 @@ public:
 		return 1.0f / this->window_aspect_ratio;
 	}
 
-	inline Vector get_normalized_window_size () const
+	inline Vector2 get_normalized_window_size () const
 	{
 		const float max_value = static_cast<float>( std::max(this->window_width_px, this->window_height_px) );
-		return Vector(static_cast<float>(this->window_width_px) / max_value, static_cast<float>(this->window_height_px) / max_value);
+		return Vector2(static_cast<float>(this->window_width_px) / max_value, static_cast<float>(this->window_height_px) / max_value);
 	}
 
 	virtual void wait_next_frame () = 0;
-	virtual void draw_cube3d (const Cube3d& rect, const Vector& offset) = 0;
+	virtual void draw_cube3d (const Cube3d& cube, const Vector& offset) = 0;
 	virtual void setup_projection_matrix (const RenderArgs& args) = 0;
 	virtual void render () = 0;
 };
@@ -141,7 +181,7 @@ public:
 // ---------------------------------------------------
 
 Renderer* init (const Renderer::Type renderer_type, const uint32_t screen_width_px, const uint32_t screen_height_px, const bool fullscreen);
-void quit (Renderer *renderer, const Renderer::Type renderer_type);
+void quit (Renderer *renderer);
 
 // ---------------------------------------------------
 

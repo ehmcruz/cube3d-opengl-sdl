@@ -88,8 +88,10 @@ void Program::use_program ()
 ProgramTriangle::ProgramTriangle ()
 	: Program ()
 {
-	static_assert(sizeof(Vertex) == 32);
-	static_assert((sizeof(Vertex) / sizeof(GLfloat)) == 8);
+	static_assert(sizeof(Vector) == sizeof(fp_t) * 3);
+	static_assert(sizeof(Vector) == sizeof(Point));
+	static_assert(sizeof(Color) == sizeof(float) * 4);
+	static_assert(sizeof(Vertex) == (sizeof(Point) + sizeof(Vector) + sizeof(Color)));
 
 	this->vs = new Shader(GL_VERTEX_SHADER, "shaders/triangles.vert");
 	this->vs->compile();
@@ -169,14 +171,16 @@ void ProgramTriangle::debug ()
 			dprintln();
 
 		dprintln("vertex[", i,
-			"] x=", v->x,
-			" y= ", v->y,
-			" offset_x= ", v->offset_x,
-			" offset_y= ", v->offset_y,
-			" r= ", v->r,
-			" g= ", v->g,
-			" b= ", v->b,
-			" a= ", v->a
+			"] x=", v->local_pos.x,
+			" y= ", v->local_pos.y,
+			" z= ", v->local_pos.z,
+			" offset_x= ", v->offset.x,
+			" offset_y= ", v->offset.y,
+			" offset_z= ", v->offset.z,
+			" r= ", v->color.r,
+			" g= ", v->color.g,
+			" b= ", v->color.b,
+			" a= ", v->color.a
 		);
 	}
 }
@@ -207,13 +211,8 @@ Renderer::Renderer (const uint32_t window_width_px_, const uint32_t window_heigh
 
 	glDisable(GL_DEPTH_TEST);
 
-	this->background_color = Graphics::config_background_color;
-
 	glClearColor(this->background_color.r, this->background_color.g, this->background_color.b, 1.0);
 	glViewport(0, 0, this->window_width_px, this->window_height_px);
-
-	this->circle_factory_low_def = new CircleFactory(64);
-	//this->opengl_circle_factory_high_def = new Opengl::CircleFactory(Config::opengl_high_def_triangles);
 
 	this->load_opengl_programs();
 
@@ -241,7 +240,6 @@ void Renderer::load_opengl_programs ()
 Renderer::~Renderer ()
 {
 	delete this->program_triangle;
-	delete this->circle_factory_low_def;
 
 	SDL_GL_DeleteContext(this->sdl_gl_context);
 	SDL_DestroyWindow(this->sdl_window);
@@ -254,11 +252,13 @@ void Renderer::wait_next_frame ()
 	this->program_triangle->clear();
 }
 
-void Renderer::draw_cube3d (const Cube3d& rect, const Vector& offset)
+void Renderer::draw_cube3d (const Cube3d& cube, const Vector& offset)
 {
-	const uint32_t n_vertices = 6;
-	const Vector local_pos = rect.get_value_delta();
+	const Vector local_pos = cube.get_value_delta();
 	//const Vector world_pos = Vector(4.0f, 4.0f);
+
+	using PositionIndex = Cube3d::PositionIndex;
+	using enum PositionIndex;
 	
 #if 0
 	dprint( "local_pos:" )
@@ -269,49 +269,84 @@ void Renderer::draw_cube3d (const Cube3d& rect, const Vector& offset)
 //exit(1);
 #endif
 
+	std::array<Point, 8> points;
+
+	points[LeftTopFront] = Point(
+		local_pos.x - cube.get_w()*0.5,
+		local_pos.y - cube.get_h()*0.5,
+		local_pos.z - cube.get_d()*0.5
+		);
+	
+	points[LeftBottomFront] = Point(
+		local_pos.x - cube.get_w()*0.5,
+		local_pos.y + cube.get_h()*0.5,
+		local_pos.z - cube.get_d()*0.5
+		);
+	
+	points[RightTopFront] = Point(
+		local_pos.x + cube.get_w()*0.5,
+		local_pos.y - cube.get_h()*0.5,
+		local_pos.z - cube.get_d()*0.5
+		);
+	
+	points[RightBottomFront] = Point(
+		local_pos.x + cube.get_w()*0.5,
+		local_pos.y + cube.get_h()*0.5,
+		local_pos.z - cube.get_d()*0.5
+		);
+	
+	points[LeftTopBack] = Point(
+		local_pos.x - cube.get_w()*0.5,
+		local_pos.y - cube.get_h()*0.5,
+		local_pos.z + cube.get_d()*0.5
+		);
+	
+	points[LeftBottomBack] = Point(
+		local_pos.x - cube.get_w()*0.5,
+		local_pos.y + cube.get_h()*0.5,
+		local_pos.z + cube.get_d()*0.5
+		);
+	
+	points[RightTopBack] = Point(
+		local_pos.x + cube.get_w()*0.5,
+		local_pos.y - cube.get_h()*0.5,
+		local_pos.z + cube.get_d()*0.5
+		);
+	
+	points[RightBottomBack] = Point(
+		local_pos.x + cube.get_w()*0.5,
+		local_pos.y + cube.get_h()*0.5,
+		local_pos.z + cube.get_d()*0.5
+		);
+	
+	constexpr uint32_t n_triangles = 6 * 2; // 6 faces * 2 triangles per face
+	constexpr uint32_t n_vertices = n_triangles * 3;
+
 	ProgramTriangle::Vertex *vertices = this->program_triangle->alloc_vertices(n_vertices);
+	uint32_t i = 0;
 
-	// draw first triangle
+	auto mount = [&i, vertices, &points, &cube, &offset] (const PositionIndex p) -> void {
+		vertices[i].local_pos = points[p];
+		vertices[i].offset = offset;
+		vertices[i].color = cube.get_vertex_color(p);
+		i++;
+	};
 
-	// upper left vertex
-	vertices[0].x = local_pos.x - rect.get_w()*0.5f;
-	vertices[0].y = local_pos.y - rect.get_h()*0.5f;
+	// bottom-1
+	mount(LeftBottomFront);
+	mount(LeftBottomBack);
+	mount(RightBottomFront);
+	// bottom-2
+	mount(RightBottomBack);
+	mount(LeftBottomBack);
+	mount(RightBottomFront);
 
-	// down right vertex
-	vertices[1].x = local_pos.x + rect.get_w()*0.5f;
-	vertices[1].y = local_pos.y + rect.get_h()*0.5f;
-
-	// down left vertex
-	vertices[2].x = local_pos.x - rect.get_w()*0.5f;
-	vertices[2].y = local_pos.y + rect.get_h()*0.5f;
-
-	// draw second triangle
-
-	// upper left vertex
-	vertices[3].x = local_pos.x - rect.get_w()*0.5f;
-	vertices[3].y = local_pos.y - rect.get_h()*0.5f;
-
-	// upper right vertex
-	vertices[4].x = local_pos.x + rect.get_w()*0.5f;
-	vertices[4].y = local_pos.y - rect.get_h()*0.5f;
-
-	// down right vertex
-	vertices[5].x = local_pos.x + rect.get_w()*0.5f;
-	vertices[5].y = local_pos.y + rect.get_h()*0.5f;
-
-	for (uint32_t i=0; i<n_vertices; i++) {
-		vertices[i].offset_x = offset.x;
-		vertices[i].offset_y = offset.y;
-		vertices[i].r = color.r;
-		vertices[i].g = color.g;
-		vertices[i].b = color.b;
-		vertices[i].a = color.a;
-	}
+	mylib_assert_exception(i == n_vertices)
 }
 
 void Renderer::setup_projection_matrix (const RenderArgs& args)
 {
-
+	this->projection_matrix = Mylib::Math::gen_identity_matrix<fp_t, 4>();
 }
 
 void Renderer::render ()
@@ -321,3 +356,8 @@ void Renderer::render ()
 	this->program_triangle->draw();
 	SDL_GL_SwapWindow(this->sdl_window);
 }
+
+// ---------------------------------------------------
+
+} // namespace Opengl
+} // namespace Graphics

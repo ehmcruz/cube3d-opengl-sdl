@@ -1,44 +1,39 @@
-set(PACMAN_SOURCE_FILES
-	game-object.cpp
-	game-world.cpp
+set(SOURCE_FILES
 	graphics.cpp
-	lib.cpp
-	events.cpp
-	graphics/sdl.cpp
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	set(PACMAN_SOURCE_FILES ${PACMAN_SOURCE_FILES}
-		pc/main.cpp)
+	set(SOURCE_FILES ${SOURCE_FILES}
+		main.cpp)
 endif()
 
 if (MSVC)
-	set(PACMAN_SOURCE_FILES ${PACMAN_SOURCE_FILES}
-		pc/main.cpp)
+	set(SOURCE_FILES ${SOURCE_FILES}
+		main.cpp)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Android")
-	set(PACMAN_SOURCE_FILES ${PACMAN_SOURCE_FILES}
+	set(SOURCE_FILES ${SOURCE_FILES}
 		android/main.cpp)
 endif()
 
 if (SUPPORT_OPENGL)
-	set(PACMAN_SOURCE_FILES ${PACMAN_SOURCE_FILES}
-		graphics/opengl.cpp)
+	set(SOURCE_FILES ${SOURCE_FILES}
+		opengl/opengl.cpp)
 endif()
 
 # -------------------------------------
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	add_executable(pacman ${PACMAN_SOURCE_FILES})
+	add_executable(cube3d ${SOURCE_FILES})
 endif()
 
 if (MSVC)
-	add_executable(pacman ${PACMAN_SOURCE_FILES})
+	add_executable(cube3d ${SOURCE_FILES})
 endif()
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Android")
-	add_library(main SHARED ${PACMAN_SOURCE_FILES})
+	add_library(main SHARED ${SOURCE_FILES})
 endif()
 
 # -------------------------------------
@@ -48,11 +43,11 @@ endif()
 #	NO_SYSTEM_FROM_IMPORTED true) # remove -isystem from system libs and use -I to include everything
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	target_link_libraries(pacman ${SDL2_LIBRARIES} ${Boost_LIBRARIES})
+	target_link_libraries(cube3d ${SDL2_LIBRARIES})
 endif()
 
 if (MSVC)
-	target_link_libraries(pacman ${SDL2_LIBRARIES} ${my_Boost_LIBRARIES})
+	target_link_libraries(cube3d ${SDL2_LIBRARIES})
 endif()
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Android")
@@ -60,5 +55,5 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Android")
 endif()
 
 if (SUPPORT_OPENGL)
-	target_link_libraries(pacman ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES})
+	target_link_libraries(cube3d ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES})
 endif()

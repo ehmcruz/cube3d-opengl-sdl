@@ -142,16 +142,9 @@ protected:
 
 public:
 	struct Vertex {
-		fp_t x; // local x,y,z coords
-		fp_t y;
-		fp_t z;
-		fp_t offset_x; // global x,y,z coords, which are added to the local coords
-		fp_t offset_y;
-		fp_t offset_z;
-		GLfloat r;
-		GLfloat g;
-		GLfloat b;
-		GLfloat a; // alpha
+		Point local_pos; // local x,y,z coords
+		Vector offset; // global x,y,z coords, which are added to the local coords
+		Color color; // rgba
 	};
 
 	OO_ENCAPSULATE_SCALAR_READONLY(GLuint, vao) // vertex array descriptor id
@@ -194,7 +187,6 @@ class Renderer : public Graphics::Renderer
 {
 protected:
 	SDL_GLContext sdl_gl_context;
-	Color background_color;
 	Matrix4 projection_matrix;
 
 	ProgramTriangle *program_triangle;
@@ -204,7 +196,7 @@ public:
 	~Renderer ();
 
 	void wait_next_frame () override final;
-	void draw_cube3d (const Cube3d& rect, const Vector& offset) override final;
+	void draw_cube3d (const Cube3d& cube, const Vector& offset) override final;
 	void setup_projection_matrix (const RenderArgs& args) override final;
 	void render () override final;
 

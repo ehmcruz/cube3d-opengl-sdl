@@ -1,4 +1,4 @@
-# 3dcube3d-opengl-sdl
+# cube3d-opengl-sdl
 
 Project still in the beginning of its development.
 
