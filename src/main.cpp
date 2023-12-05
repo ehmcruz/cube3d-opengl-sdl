@@ -33,6 +33,8 @@ static constexpr Color config_background_color = {
 	.a = 1.0f
 };
 
+static Cube3d cube(1.0f);
+
 // -------------------------------------------
 
 namespace Config {
@@ -55,6 +57,14 @@ constexpr ClockDuration fp_to_ClockDuration (const fp_t t)
 constexpr fp_t ClockDuration_to_fp (const ClockDuration& d)
 {
 	return std::chrono::duration_cast<std::chrono::duration<fp_t>>(d).count();
+}
+
+// -------------------------------------------
+
+static void render_cube ()
+{
+	Vector offset = Vector::zero();
+	renderer->draw_cube3d(cube, offset);
 }
 
 // -------------------------------------------
@@ -125,6 +135,7 @@ static void main_loop ()
 		process_events();
 
 		renderer->setup_projection_matrix({});
+		render_cube();
 		renderer->render();
 
 		const ClockTime trequired = Clock::now();
