@@ -1,10 +1,15 @@
 #include <iostream>
 #include <exception>
 #include <chrono>
+#include <random>
+#include <numbers>
 
 #include <cstdlib>
 
+#include <my-lib/math.h>
+
 #include "graphics.h"
+#include "debug.h"
 
 // -------------------------------------------
 
@@ -33,13 +38,15 @@ static constexpr Color config_background_color = {
 	.a = 1.0f
 };
 
-static Cube3d cube(1.0f);
+static Cube3d cube(0.5f);
+
+static std::mt19937_64 rgenerator;
 
 // -------------------------------------------
 
 namespace Config {
-	inline constexpr fp_t target_fps = 60.0;
-	inline constexpr fp_t min_fps = 30.0; // if fps gets lower than min_fps, we slow down the simulation
+	inline constexpr fp_t target_fps = 30.0;
+	inline constexpr fp_t min_fps = 20.0; // if fps gets lower than min_fps, we slow down the simulation
 	inline constexpr fp_t target_dt = 1.0 / target_fps;
 	inline constexpr fp_t max_dt = 1.0 / min_fps;
 	inline constexpr fp_t sleep_threshold = target_dt * 0.9;
@@ -61,10 +68,52 @@ constexpr fp_t ClockDuration_to_fp (const ClockDuration& d)
 
 // -------------------------------------------
 
-static void render_cube ()
+static void setup_random ()
+{
+	std::random_device rd;
+	rgenerator.seed(rd());
+}
+
+static Color random_color ()
+{
+	std::uniform_real_distribution<float> dist(0.0f, 1.0f);
+	return { .r = dist(rgenerator), .g = dist(rgenerator), .b = dist(rgenerator), .a = 1.0f };
+}
+
+// -------------------------------------------
+
+static void render_init_colors ()
+{
+	renderer->set_background_color( { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f } );
+
+	cube.set_vertex_color(Cube3d::LeftBottomFront,    { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });
+	cube.set_vertex_color(Cube3d::RightBottomFront,   { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });
+	cube.set_vertex_color(Cube3d::LeftTopFront,       { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });
+	cube.set_vertex_color(Cube3d::RightTopFront,      { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });
+	cube.set_vertex_color(Cube3d::LeftBottomBack,     { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f });
+	cube.set_vertex_color(Cube3d::RightBottomBack,    { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f });
+	cube.set_vertex_color(Cube3d::LeftTopBack,        { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f });
+	cube.set_vertex_color(Cube3d::RightTopBack,       { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f });
+
+#if 1
+	for (auto& c : cube.get_colors_ref())
+		c = random_color();
+#endif
+}
+
+// -------------------------------------------
+
+static void render_cube (const fp_t dt)
 {
 	Vector offset = Vector::zero();
 	renderer->draw_cube3d(cube, offset);
+
+	constexpr fp_t angular_velocity = (2.0f * std::numbers::pi_v<fp_t>) / 10.0f;
+
+	cube.set_rotation_vector(Vector { 1, 1, 0 });
+	cube.set_rotation_angle(cube.get_rotation_angle() + angular_velocity * dt);
+
+	dprintln("cube rotation angle=", Mylib::Math::radians_to_degrees(cube.get_rotation_angle()));
 }
 
 // -------------------------------------------
@@ -101,7 +150,8 @@ static void main_loop ()
 
 	keys = SDL_GetKeyboardState(nullptr);
 
-	renderer->set_background_color( { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f } );
+	setup_random();
+	render_init_colors();
 
 	real_dt = 0;
 	virtual_dt = 0;
@@ -119,7 +169,8 @@ static void main_loop ()
 
 		virtual_dt = (real_dt > Config::max_dt) ? Config::max_dt : real_dt;
 
-	#if 0
+	#if 1
+		dprintln("----------------------------------------------");
 		dprintln("start new frame render target_dt=", Config::target_dt,
 			" required_dt=", required_dt,
 			" real_dt=", real_dt,
@@ -135,7 +186,7 @@ static void main_loop ()
 		process_events();
 
 		renderer->setup_projection_matrix({});
-		render_cube();
+		render_cube(virtual_dt);
 		renderer->render();
 
 		const ClockTime trequired = Clock::now();
@@ -175,7 +226,7 @@ static void main_loop ()
 
 void main (const int argc, char **argv)
 {
-	renderer = Graphics::init(Renderer::Type::Opengl, 800, 600, false);
+	renderer = Graphics::init(Renderer::Type::Opengl, 800, 800, false);
 
 	main_loop();
 

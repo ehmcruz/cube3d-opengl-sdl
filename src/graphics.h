@@ -38,6 +38,13 @@ using Point = Vector;
 
 // ---------------------------------------------------
 
+consteval fp_t fp (const auto v)
+{
+	return static_cast<fp_t>(v);
+}
+
+// ---------------------------------------------------
+
 struct Color {
 	float r;
 	float g;
@@ -90,6 +97,9 @@ public:
 protected:
 	OO_ENCAPSULATE_SCALAR(fp_t, w) // width
 
+	OO_ENCAPSULATE_SCALAR_INIT(fp_t, rotation_angle, 0)
+	OO_ENCAPSULATE_OBJ(Vector, rotation_vector)
+
 	std::array<Color, 8> colors;
 
 public:
@@ -114,6 +124,11 @@ public:
 	{
 		//mylib_assert_exception(i < get_n_vertices())
 		return this->colors[i];
+	}
+
+	std::array<Color, 8>& get_colors_ref () noexcept
+	{
+		return this->colors;
 	}
 
 	inline fp_t get_h () const noexcept

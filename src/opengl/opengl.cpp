@@ -130,11 +130,11 @@ void ProgramTriangle::setup_vertex_array ()
 	glEnableVertexAttribArray( std::to_underlying(Attrib::Color) );
 
 	pos = 0;
-	length = 2;
+	length = 3;
 	glVertexAttribPointer( std::to_underlying(Attrib::Position), length, GL_FLOAT, GL_FALSE, sizeof(Vertex), ( void * )(pos * sizeof(float)) );
 	
 	pos += length;
-	length = 2;
+	length = 3;
 	glVertexAttribPointer( std::to_underlying(Attrib::Offset), length, GL_FLOAT, GL_FALSE, sizeof(Vertex), ( void * )(pos * sizeof(float)) );
 	
 	pos += length;
@@ -172,15 +172,15 @@ void ProgramTriangle::debug ()
 
 		dprintln("vertex[", i,
 			"] x=", v->local_pos.x,
-			" y= ", v->local_pos.y,
-			" z= ", v->local_pos.z,
-			" offset_x= ", v->offset.x,
-			" offset_y= ", v->offset.y,
-			" offset_z= ", v->offset.z,
-			" r= ", v->color.r,
-			" g= ", v->color.g,
-			" b= ", v->color.b,
-			" a= ", v->color.a
+			" y=", v->local_pos.y,
+			" z=", v->local_pos.z,
+			" offset_x=", v->offset.x,
+			" offset_y=", v->offset.y,
+			" offset_z=", v->offset.z,
+			" r=", v->color.r,
+			" g=", v->color.g,
+			" b=", v->color.b,
+			" a=", v->color.a
 		);
 	}
 }
@@ -209,7 +209,8 @@ Renderer::Renderer (const uint32_t window_width_px_, const uint32_t window_heigh
 
 	dprintln("Status: Using GLEW ", glewGetString(GLEW_VERSION));
 
-	glDisable(GL_DEPTH_TEST);
+	//glDisable(GL_DEPTH_TEST);
+	glEnable(GL_DEPTH_TEST);
 
 	glClearColor(this->background_color.r, this->background_color.g, this->background_color.b, 1.0);
 	glViewport(0, 0, this->window_width_px, this->window_height_px);
@@ -247,7 +248,7 @@ Renderer::~Renderer ()
 
 void Renderer::wait_next_frame ()
 {
-	glClear( GL_COLOR_BUFFER_BIT );
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	this->program_triangle->clear();
 }
@@ -272,54 +273,59 @@ void Renderer::draw_cube3d (const Cube3d& cube, const Vector& offset)
 	std::array<Point, 8> points;
 
 	points[LeftTopFront] = Point(
-		local_pos.x - cube.get_w()*0.5,
-		local_pos.y - cube.get_h()*0.5,
-		local_pos.z - cube.get_d()*0.5
+		local_pos.x - cube.get_w()*fp(0.5),
+		local_pos.y + cube.get_h()*fp(0.5),
+		local_pos.z - cube.get_d()*fp(0.5)
 		);
 	
 	points[LeftBottomFront] = Point(
-		local_pos.x - cube.get_w()*0.5,
-		local_pos.y + cube.get_h()*0.5,
-		local_pos.z - cube.get_d()*0.5
+		local_pos.x - cube.get_w()*fp(0.5),
+		local_pos.y - cube.get_h()*fp(0.5),
+		local_pos.z - cube.get_d()*fp(0.5)
 		);
 	
 	points[RightTopFront] = Point(
-		local_pos.x + cube.get_w()*0.5,
-		local_pos.y - cube.get_h()*0.5,
-		local_pos.z - cube.get_d()*0.5
+		local_pos.x + cube.get_w()*fp(0.5),
+		local_pos.y + cube.get_h()*fp(0.5),
+		local_pos.z - cube.get_d()*fp(0.5)
 		);
 	
 	points[RightBottomFront] = Point(
-		local_pos.x + cube.get_w()*0.5,
-		local_pos.y + cube.get_h()*0.5,
-		local_pos.z - cube.get_d()*0.5
+		local_pos.x + cube.get_w()*fp(0.5),
+		local_pos.y - cube.get_h()*fp(0.5),
+		local_pos.z - cube.get_d()*fp(0.5)
 		);
 	
 	points[LeftTopBack] = Point(
-		local_pos.x - cube.get_w()*0.5,
-		local_pos.y - cube.get_h()*0.5,
-		local_pos.z + cube.get_d()*0.5
+		local_pos.x - cube.get_w()*fp(0.5),
+		local_pos.y + cube.get_h()*fp(0.5),
+		local_pos.z + cube.get_d()*fp(0.5)
 		);
 	
 	points[LeftBottomBack] = Point(
-		local_pos.x - cube.get_w()*0.5,
-		local_pos.y + cube.get_h()*0.5,
-		local_pos.z + cube.get_d()*0.5
+		local_pos.x - cube.get_w()*fp(0.5),
+		local_pos.y - cube.get_h()*fp(0.5),
+		local_pos.z + cube.get_d()*fp(0.5)
 		);
 	
 	points[RightTopBack] = Point(
-		local_pos.x + cube.get_w()*0.5,
-		local_pos.y - cube.get_h()*0.5,
-		local_pos.z + cube.get_d()*0.5
+		local_pos.x + cube.get_w()*fp(0.5),
+		local_pos.y + cube.get_h()*fp(0.5),
+		local_pos.z + cube.get_d()*fp(0.5)
 		);
 	
 	points[RightBottomBack] = Point(
-		local_pos.x + cube.get_w()*0.5,
-		local_pos.y + cube.get_h()*0.5,
-		local_pos.z + cube.get_d()*0.5
+		local_pos.x + cube.get_w()*fp(0.5),
+		local_pos.y - cube.get_h()*fp(0.5),
+		local_pos.z + cube.get_d()*fp(0.5)
 		);
 	
-	constexpr uint32_t n_triangles = 6 * 2; // 6 faces * 2 triangles per face
+	if (cube.get_rotation_angle() != fp(0)) {
+		for (auto& p : points)
+			p = Mylib::Math::rotate_around_vector(p, cube.get_ref_rotation_vector(), cube.get_rotation_angle());
+	}
+	
+	constexpr uint32_t n_triangles = 12; // 6 faces * 2 triangles per face
 	constexpr uint32_t n_vertices = n_triangles * 3;
 
 	ProgramTriangle::Vertex *vertices = this->program_triangle->alloc_vertices(n_vertices);
@@ -332,14 +338,35 @@ void Renderer::draw_cube3d (const Cube3d& cube, const Vector& offset)
 		i++;
 	};
 
-	// bottom-1
-	mount(LeftBottomFront);
-	mount(LeftBottomBack);
-	mount(RightBottomFront);
-	// bottom-2
-	mount(RightBottomBack);
-	mount(LeftBottomBack);
-	mount(RightBottomFront);
+	auto mount_triangle = [&mount] (const PositionIndex p1, const PositionIndex p2, const PositionIndex p3) -> void {
+		mount(p1);
+		mount(p2);
+		mount(p3);
+	};
+
+	// bottom
+	mount_triangle(LeftBottomFront, RightBottomFront, LeftBottomBack);
+	mount_triangle(RightBottomBack, RightBottomFront, LeftBottomBack);
+
+	// top
+	mount_triangle(LeftTopFront, RightTopFront, LeftTopBack);
+	mount_triangle(RightTopBack, RightTopFront, LeftTopBack);
+
+	// front
+	mount_triangle(LeftTopFront, LeftBottomFront, RightTopFront);
+	mount_triangle(RightBottomFront, LeftBottomFront, RightTopFront);
+
+	// back
+	mount_triangle(LeftTopBack, LeftBottomBack, RightTopBack);
+	mount_triangle(RightBottomBack, LeftBottomBack, RightTopBack);
+
+	// left
+	mount_triangle(LeftTopFront, LeftBottomFront, LeftTopBack);
+	mount_triangle(LeftBottomBack, LeftBottomFront, LeftTopBack);
+
+	// right
+	mount_triangle(RightTopFront, RightBottomFront, RightTopBack);
+	mount_triangle(RightBottomBack, RightBottomFront, RightTopBack);
 
 	mylib_assert_exception(i == n_vertices)
 }
@@ -347,10 +374,17 @@ void Renderer::draw_cube3d (const Cube3d& cube, const Vector& offset)
 void Renderer::setup_projection_matrix (const RenderArgs& args)
 {
 	this->projection_matrix = Mylib::Math::gen_identity_matrix<fp_t, 4>();
+
+#if 1
+	dprintln("projection matrix:");
+	dprintln(this->projection_matrix);
+	dprintln();
+#endif
 }
 
 void Renderer::render ()
 {
+	//this->program_triangle->debug();
 	this->program_triangle->upload_projection_matrix(this->projection_matrix);
 	this->program_triangle->upload_vertex_buffer();
 	this->program_triangle->draw();
