@@ -108,7 +108,7 @@ static void render_cube (const fp_t dt)
 	Vector offset = Vector::zero();
 	renderer->draw_cube3d(cube, offset);
 
-	constexpr fp_t angular_velocity = (2.0f * std::numbers::pi_v<fp_t>) / 10.0f;
+	constexpr fp_t angular_velocity = Mylib::Math::degrees_to_radians(fp(360)) / fp(10);
 
 	cube.set_rotation_vector(Vector { 1, 1, 0 });
 	cube.set_rotation_angle(cube.get_rotation_angle() + angular_velocity * dt);
