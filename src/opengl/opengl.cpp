@@ -7,6 +7,8 @@
 #include <cstdlib>
 #include <cmath>
 
+#include <my-lib/math.h>
+
 #include "../debug.h"
 #include "opengl.h"
 
@@ -373,7 +375,18 @@ void Renderer::draw_cube3d (const Cube3d& cube, const Vector& offset)
 
 void Renderer::setup_projection_matrix (const RenderArgs& args)
 {
-	this->projection_matrix = Mylib::Math::gen_identity_matrix<fp_t, 4>();
+	this->projection_matrix = Mylib::Math::gen_perspective_matrix<fp_t>(
+		Mylib::Math::degrees_to_radians(fp(45)),
+		static_cast<fp_t>(this->window_width_px),
+		static_cast<fp_t>(this->window_height_px),
+		fp(0.1),
+		fp(100),
+		fp(-1)
+	);
+
+	this->projection_matrix.transpose();
+
+	//this->projection_matrix = Mylib::Math::gen_identity_matrix<fp_t, 4>();
 
 #if 1
 	dprintln("projection matrix:");

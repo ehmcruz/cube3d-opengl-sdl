@@ -3,10 +3,12 @@
 #include <chrono>
 #include <random>
 #include <numbers>
+#include <list>
 
 #include <cstdlib>
 
 #include <my-lib/math.h>
+#include <my-lib/macros.h>
 
 #include "graphics.h"
 #include "debug.h"
@@ -38,8 +40,6 @@ static constexpr Color config_background_color = {
 	.a = 1.0f
 };
 
-static Cube3d cube(0.5f);
-
 static std::mt19937_64 rgenerator;
 
 // -------------------------------------------
@@ -68,6 +68,38 @@ constexpr fp_t ClockDuration_to_fp (const ClockDuration& d)
 
 // -------------------------------------------
 
+class Object
+{
+protected:
+	OO_ENCAPSULATE_OBJ(Point, pos)
+public:
+	virtual void render (const fp_t dt) = 0;
+};
+
+class ObjCube : public Object
+{
+protected:
+	OO_ENCAPSULATE_OBJ(Cube3d, cube)
+public:
+	void render (const fp_t dt) override final
+	{
+		renderer->draw_cube3d(this->cube, this->pos);
+
+		constexpr fp_t angular_velocity = Mylib::Math::degrees_to_radians(fp(360)) / fp(2);
+
+		cube.set_rotation_vector(Vector { 1, 1, 0 });
+		cube.set_rotation_angle(cube.get_rotation_angle() + angular_velocity * dt);
+
+		dprintln("cube rotation angle=", Mylib::Math::radians_to_degrees(cube.get_rotation_angle()));
+	}
+};
+
+// -------------------------------------------
+
+std::list<Object*> objects;
+
+// -------------------------------------------
+
 static void setup_random ()
 {
 	std::random_device rd;
@@ -82,10 +114,14 @@ static Color random_color ()
 
 // -------------------------------------------
 
-static void render_init_colors ()
+static void init_objs ()
 {
 	renderer->set_background_color( { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f } );
 
+	ObjCube& obj_cube = *static_cast<ObjCube*>(objects.emplace_back(new ObjCube));
+	obj_cube.set_pos(Point(0, 0, -3));
+	Cube3d& cube = obj_cube.get_ref_cube();
+	cube.set_w(fp(0.5));
 	cube.set_vertex_color(Cube3d::LeftBottomFront,    { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });
 	cube.set_vertex_color(Cube3d::RightBottomFront,   { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });
 	cube.set_vertex_color(Cube3d::LeftTopFront,       { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });
@@ -103,17 +139,10 @@ static void render_init_colors ()
 
 // -------------------------------------------
 
-static void render_cube (const fp_t dt)
+static void render_objs (const fp_t dt)
 {
-	Vector offset = Vector::zero();
-	renderer->draw_cube3d(cube, offset);
-
-	constexpr fp_t angular_velocity = Mylib::Math::degrees_to_radians(fp(360)) / fp(10);
-
-	cube.set_rotation_vector(Vector { 1, 1, 0 });
-	cube.set_rotation_angle(cube.get_rotation_angle() + angular_velocity * dt);
-
-	dprintln("cube rotation angle=", Mylib::Math::radians_to_degrees(cube.get_rotation_angle()));
+	for (auto *obj : objects)
+		obj->render(dt);
 }
 
 // -------------------------------------------
@@ -151,7 +180,7 @@ static void main_loop ()
 	keys = SDL_GetKeyboardState(nullptr);
 
 	setup_random();
-	render_init_colors();
+	init_objs();
 
 	real_dt = 0;
 	virtual_dt = 0;
@@ -186,7 +215,7 @@ static void main_loop ()
 		process_events();
 
 		renderer->setup_projection_matrix({});
-		render_cube(virtual_dt);
+		render_objs(virtual_dt);
 		renderer->render();
 
 		const ClockTime trequired = Clock::now();
