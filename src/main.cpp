@@ -53,6 +53,7 @@ namespace Config {
 	inline constexpr bool sleep_to_save_cpu = true;
 	inline constexpr bool busy_wait_to_ensure_fps = true;
 	inline constexpr fp_t player_speed = 0.5;
+	inline constexpr fp_t camera_rotate_speed = 0.5;
 }
 
 // -------------------------------------------
@@ -94,7 +95,7 @@ public:
 
 		constexpr fp_t angular_velocity = Mylib::Math::degrees_to_radians(fp(360)) / fp(2);
 //dprintln("xxxxxxxx ", Mylib::Math::degrees_to_radians(fp(360)));
-		cube.set_rotation_vector(Vector { 0.5, 1, 0 });
+		cube.set_rotation_vector(Vector { 0, 0, 1 });
 		cube.set_rotation_angle_bounded(cube.get_rotation_angle() + angular_velocity * dt);
 
 		dprintln("cube rotation angle=", Mylib::Math::radians_to_degrees(cube.get_rotation_angle()));
@@ -105,6 +106,8 @@ public:
 
 std::list<Object*> objects;
 Object *player = nullptr;
+Vector camera_pos = { 0, 0, 0 };
+Vector camera_target = { 0, 0, -1 };
 
 // -------------------------------------------
 
@@ -127,7 +130,7 @@ static void init_objs ()
 	renderer->set_background_color( { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f } );
 
 	ObjCube3d& obj_cube = *static_cast<ObjCube3d*>(objects.emplace_back(new ObjCube3d));
-	obj_cube.set_pos(Point(0, -0.35, -1));
+	obj_cube.set_pos(Point(0, -0.3, 1));
 	obj_cube.set_velocity(Vector(0, 0, 0));
 	Cube3d& cube = obj_cube.get_ref_cube();
 	cube.set_w(fp(0.25));
@@ -151,6 +154,15 @@ static void init_objs ()
 
 static void render_objs (const fp_t dt)
 {
+	renderer->setup_projection_matrix({
+		.world_camera_pos = camera_pos,
+		//.world_camera_target = player->get_ref_pos(),
+		.world_camera_target = camera_target,
+		.fovy = Mylib::Math::degrees_to_radians(fp(45)),
+		.z_near = 0.1,
+		.z_far = 100
+	});
+
 	for (auto *obj : objects)
 		obj->render(dt);
 }
@@ -165,7 +177,7 @@ static void process_physics (const fp_t dt)
 
 // -------------------------------------------
 
-static void process_keydown (const SDL_KeyboardEvent& event)
+static void process_keydown (const SDL_KeyboardEvent& event, const fp_t dt)
 {
 	switch (event.keysym.sym) {
 		case SDLK_ESCAPE:
@@ -195,10 +207,26 @@ static void process_keydown (const SDL_KeyboardEvent& event)
 		case SDLK_LEFTBRACKET:
 			player->set_velocity(Vector(0, 0, Config::player_speed));
 		break;
+
+		case SDLK_a:
+			camera_target += Vector(-Config::camera_rotate_speed, 0, 0) * dt;
+		break;
+
+		case SDLK_d:
+			camera_target += Vector(Config::camera_rotate_speed, 0, 0) * dt;
+		break;
+
+		case SDLK_w:
+			camera_target += Vector(0, Config::camera_rotate_speed, 0) * dt;
+		break;
+
+		case SDLK_s:
+			camera_target += Vector(0, -Config::camera_rotate_speed, 0) * dt;
+		break;
 	}
 }
 
-static void process_keyup (const SDL_KeyboardEvent& event)
+static void process_keyup (const SDL_KeyboardEvent& event, const fp_t dt)
 {
 	switch (event.keysym.sym) {
 		case SDLK_LEFT:
@@ -214,7 +242,7 @@ static void process_keyup (const SDL_KeyboardEvent& event)
 
 // -------------------------------------------
 
-void process_events ()
+void process_events (const fp_t dt)
 {
 	SDL_Event event;
 
@@ -225,11 +253,11 @@ void process_events ()
 			break;
 			
 			case SDL_KEYDOWN:
-				process_keydown(event.key);
+				process_keydown(event.key, dt);
 			break;
 
 			case SDL_KEYUP:
-				process_keyup(event.key);
+				process_keyup(event.key, dt);
 			break;
 		}
 	}
@@ -277,9 +305,8 @@ static void main_loop ()
 			);
 	#endif
 
-		process_events();
+		process_events(virtual_dt);
 
-		renderer->setup_projection_matrix({});
 		process_physics(virtual_dt);
 		render_objs(virtual_dt);
 		renderer->render();

@@ -418,13 +418,17 @@ void Renderer::setup_projection_matrix (const RenderArgs& args)
 {
 #ifndef OPENGL_SOFTWARE_CALCULATE_MATRIX
 	this->projection_matrix = Mylib::Math::gen_perspective_matrix<fp_t>(
-		Mylib::Math::degrees_to_radians(fp(45)),
-		static_cast<fp_t>(this->window_width_px),
-		static_cast<fp_t>(this->window_height_px),
-		fp(0.1),
-		fp(100),
-		fp(1)
-	);
+			args.fovy,
+			static_cast<fp_t>(this->window_width_px),
+			static_cast<fp_t>(this->window_height_px),
+			args.z_near,
+			args.z_far,
+			fp(1)
+		)
+		* Mylib::Math::gen_look_at_matrix<fp_t>(
+			args.world_camera_pos,
+			args.world_camera_target,
+			Vector(0, 1, 0));
 #else
 	this->projection_matrix = Mylib::Math::gen_identity_matrix<fp_t, 4>();
 #endif
@@ -433,6 +437,8 @@ void Renderer::setup_projection_matrix (const RenderArgs& args)
 	dprintln("projection matrix:");
 	dprintln(this->projection_matrix);
 	dprintln();
+	dprintln("camera position: ", args.world_camera_pos);
+	dprintln("camera target: ", args.world_camera_target);
 #endif
 }
 

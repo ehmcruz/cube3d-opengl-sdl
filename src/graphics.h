@@ -152,7 +152,11 @@ public:
 // ---------------------------------------------------
 
 struct RenderArgs {
-	Line world_camera;
+	Point world_camera_pos;
+	Point world_camera_target;
+	fp_t fovy;
+	fp_t z_near;
+	fp_t z_far;
 };
 
 // ---------------------------------------------------
