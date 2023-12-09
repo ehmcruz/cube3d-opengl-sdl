@@ -93,7 +93,11 @@ ProgramTriangle::ProgramTriangle ()
 	static_assert(sizeof(Vector) == sizeof(fp_t) * 3);
 	static_assert(sizeof(Vector) == sizeof(Point));
 	static_assert(sizeof(Color) == sizeof(float) * 4);
+#ifndef OPENGL_SOFTWARE_CALCULATE_MATRIX
 	static_assert(sizeof(Vertex) == (sizeof(Point) + sizeof(Vector) + sizeof(Color)));
+#else
+	static_assert(sizeof(Vertex) == (sizeof(Point4) + sizeof(Vector) + sizeof(Color)));
+#endif
 
 	this->vs = new Shader(GL_VERTEX_SHADER, "shaders/triangles.vert");
 	this->vs->compile();
@@ -132,7 +136,11 @@ void ProgramTriangle::setup_vertex_array ()
 	glEnableVertexAttribArray( std::to_underlying(Attrib::Color) );
 
 	pos = 0;
+#ifndef OPENGL_SOFTWARE_CALCULATE_MATRIX
 	length = 3;
+#else
+	length = 4;
+#endif
 	glVertexAttribPointer( std::to_underlying(Attrib::Position), length, GL_FLOAT, GL_FALSE, sizeof(Vertex), ( void * )(pos * sizeof(float)) );
 	
 	pos += length;
@@ -176,6 +184,9 @@ void ProgramTriangle::debug ()
 			"] x=", v->local_pos.x,
 			" y=", v->local_pos.y,
 			" z=", v->local_pos.z,
+		#ifdef OPENGL_SOFTWARE_CALCULATE_MATRIX
+			" w=", v->local_pos.w,
+		#endif
 			" offset_x=", v->offset.x,
 			" offset_y=", v->offset.y,
 			" offset_z=", v->offset.z,
@@ -326,6 +337,30 @@ void Renderer::draw_cube3d (const Cube3d& cube, const Vector& offset)
 		for (auto& p : points)
 			p = Mylib::Math::rotate_around_vector(p, cube.get_ref_rotation_vector(), cube.get_rotation_angle());
 	}
+
+#ifdef OPENGL_SOFTWARE_CALCULATE_MATRIX
+	std::array<Point4, 8> points4;
+
+	Matrix4 proj;
+	proj.set_perspective(
+		Mylib::Math::degrees_to_radians(fp(45)),
+		static_cast<fp_t>(this->window_width_px),
+		static_cast<fp_t>(this->window_height_px),
+		fp(0.1),
+		fp(100),
+		fp(1)
+	);
+	dprintln("software projection matrix:", '\n', proj);
+	for (int i = 0; auto& p : points) {
+		Point translated = p + offset;
+		Point4 p4 (translated.x, translated.y, translated.z, 1);
+		//proj.set_identity();
+		Point4 trans = proj * p4;
+		//trans.w = 1;
+		points4[i++] = trans;
+		dprintln("trans ", trans);
+	}
+#endif
 	
 	constexpr uint32_t n_triangles = 12; // 6 faces * 2 triangles per face
 	constexpr uint32_t n_vertices = n_triangles * 3;
@@ -333,8 +368,14 @@ void Renderer::draw_cube3d (const Cube3d& cube, const Vector& offset)
 	ProgramTriangle::Vertex *vertices = this->program_triangle->alloc_vertices(n_vertices);
 	uint32_t i = 0;
 
-	auto mount = [&i, vertices, &points, &cube, &offset] (const PositionIndex p) -> void {
-		vertices[i].local_pos = points[p];
+#ifndef OPENGL_SOFTWARE_CALCULATE_MATRIX
+	auto& points_ = points;
+#else
+	auto& points_ = points4;
+#endif
+
+	auto mount = [&i, vertices, &points_, &cube, &offset] (const PositionIndex p) -> void {
+		vertices[i].local_pos = points_[p];
 		vertices[i].offset = offset;
 		vertices[i].color = cube.get_vertex_color(p);
 		i++;
@@ -375,18 +416,18 @@ void Renderer::draw_cube3d (const Cube3d& cube, const Vector& offset)
 
 void Renderer::setup_projection_matrix (const RenderArgs& args)
 {
+#ifndef OPENGL_SOFTWARE_CALCULATE_MATRIX
 	this->projection_matrix = Mylib::Math::gen_perspective_matrix<fp_t>(
 		Mylib::Math::degrees_to_radians(fp(45)),
 		static_cast<fp_t>(this->window_width_px),
 		static_cast<fp_t>(this->window_height_px),
 		fp(0.1),
 		fp(100),
-		fp(-1)
+		fp(1)
 	);
-
-	this->projection_matrix.transpose();
-
-	//this->projection_matrix = Mylib::Math::gen_identity_matrix<fp_t, 4>();
+#else
+	this->projection_matrix = Mylib::Math::gen_identity_matrix<fp_t, 4>();
+#endif
 
 #if 1
 	dprintln("projection matrix:");

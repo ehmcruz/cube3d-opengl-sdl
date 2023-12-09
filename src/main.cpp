@@ -86,7 +86,7 @@ public:
 		renderer->draw_cube3d(this->cube, this->pos);
 
 		constexpr fp_t angular_velocity = Mylib::Math::degrees_to_radians(fp(360)) / fp(2);
-
+//dprintln("xxxxxxxx ", Mylib::Math::degrees_to_radians(fp(360)));
 		cube.set_rotation_vector(Vector { 1, 1, 0 });
 		cube.set_rotation_angle(cube.get_rotation_angle() + angular_velocity * dt);
 
@@ -119,9 +119,9 @@ static void init_objs ()
 	renderer->set_background_color( { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f } );
 
 	ObjCube& obj_cube = *static_cast<ObjCube*>(objects.emplace_back(new ObjCube));
-	obj_cube.set_pos(Point(0, 0, -3));
+	obj_cube.set_pos(Point(0, -0.35, -5.5));
 	Cube3d& cube = obj_cube.get_ref_cube();
-	cube.set_w(fp(0.5));
+	cube.set_w(fp(0.25));
 	cube.set_vertex_color(Cube3d::LeftBottomFront,    { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });
 	cube.set_vertex_color(Cube3d::RightBottomFront,   { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });
 	cube.set_vertex_color(Cube3d::LeftTopFront,       { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });

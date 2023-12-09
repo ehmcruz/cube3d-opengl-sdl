@@ -12,4 +12,5 @@ void main ()
 {
 	v_color = i_color;
 	gl_Position = u_projection_matrix * vec4( (i_offset + i_position), 1.0 );
+	//gl_Position = i_position;
 }

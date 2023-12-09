@@ -27,6 +27,10 @@ namespace Opengl
 
 // ---------------------------------------------------
 
+//#define OPENGL_SOFTWARE_CALCULATE_MATRIX
+
+// ---------------------------------------------------
+
 class Program;
 
 // ---------------------------------------------------
@@ -142,7 +146,11 @@ protected:
 
 public:
 	struct Vertex {
+	#ifndef OPENGL_SOFTWARE_CALCULATE_MATRIX
 		Point local_pos; // local x,y,z coords
+	#else
+		Point4 local_pos; // local x,y,z coords
+	#endif
 		Vector offset; // global x,y,z coords, which are added to the local coords
 		Color color; // rgba
 	};
