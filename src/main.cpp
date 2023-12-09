@@ -53,7 +53,8 @@ namespace Config {
 	inline constexpr bool sleep_to_save_cpu = true;
 	inline constexpr bool busy_wait_to_ensure_fps = true;
 	inline constexpr fp_t player_speed = 0.5;
-	inline constexpr fp_t camera_rotate_speed = 0.5;
+	inline constexpr fp_t camera_rotate_angular_speed = Mylib::Math::degrees_to_radians(fp(90));
+	inline constexpr fp_t camera_move_speed = 0.5;
 }
 
 // -------------------------------------------
@@ -95,10 +96,11 @@ public:
 
 		constexpr fp_t angular_velocity = Mylib::Math::degrees_to_radians(fp(360)) / fp(2);
 //dprintln("xxxxxxxx ", Mylib::Math::degrees_to_radians(fp(360)));
-		cube.set_rotation_vector(Vector { 0, 0, 1 });
+		cube.set_rotation_axis(Vector { 0, 0, 1 });
 		cube.set_rotation_angle_bounded(cube.get_rotation_angle() + angular_velocity * dt);
 
-		dprintln("cube rotation angle=", Mylib::Math::radians_to_degrees(cube.get_rotation_angle()));
+		dprintln("cube position=", this->get_ref_pos());
+		dprintln("cube rotation angle=", Mylib::Math::radians_to_degrees(this->cube.get_rotation_angle()));
 	}
 };
 
@@ -106,8 +108,7 @@ public:
 
 std::list<Object*> objects;
 Object *player = nullptr;
-Vector camera_pos = { 0, 0, 0 };
-Vector camera_target = { 0, 0, -1 };
+Line camera;
 
 // -------------------------------------------
 
@@ -127,13 +128,19 @@ static Color random_color ()
 
 static void init_objs ()
 {
+	camera.base_point.set_zero();
+	camera.direction = Vector(0, 0, -1);
+
 	renderer->set_background_color( { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f } );
 
 	ObjCube3d& obj_cube = *static_cast<ObjCube3d*>(objects.emplace_back(new ObjCube3d));
-	obj_cube.set_pos(Point(0, -0.3, 1));
+	player = &obj_cube;
+	obj_cube.set_pos(Point(0, -0.3, -1));
 	obj_cube.set_velocity(Vector(0, 0, 0));
 	Cube3d& cube = obj_cube.get_ref_cube();
 	cube.set_w(fp(0.25));
+
+#if 0
 	cube.set_vertex_color(Cube3d::LeftBottomFront,    { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });
 	cube.set_vertex_color(Cube3d::RightBottomFront,   { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });
 	cube.set_vertex_color(Cube3d::LeftTopFront,       { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });
@@ -142,9 +149,7 @@ static void init_objs ()
 	cube.set_vertex_color(Cube3d::RightBottomBack,    { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f });
 	cube.set_vertex_color(Cube3d::LeftTopBack,        { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f });
 	cube.set_vertex_color(Cube3d::RightTopBack,       { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f });
-	player = &obj_cube;
-
-#if 1
+#else
 	for (auto& c : cube.get_colors_ref())
 		c = random_color();
 #endif
@@ -155,9 +160,9 @@ static void init_objs ()
 static void render_objs (const fp_t dt)
 {
 	renderer->setup_projection_matrix({
-		.world_camera_pos = camera_pos,
+		.world_camera_pos = camera.base_point,
 		//.world_camera_target = player->get_ref_pos(),
-		.world_camera_target = camera_target,
+		.world_camera_target = camera.base_point + camera.direction,
 		.fovy = Mylib::Math::degrees_to_radians(fp(45)),
 		.z_near = 0.1,
 		.z_far = 100
@@ -176,6 +181,23 @@ static void process_physics (const fp_t dt)
 }
 
 // -------------------------------------------
+
+static void process_keys (const Uint8 *keys, const fp_t dt)
+{
+	if (keys[SDL_SCANCODE_A])
+		camera.direction.rotate_around_axis(Vector::up(), Config::camera_rotate_angular_speed * dt);
+	else if (keys[SDL_SCANCODE_D])
+		camera.direction.rotate_around_axis(Vector::up(), -Config::camera_rotate_angular_speed * dt);
+	else if (keys[SDL_SCANCODE_W])
+		camera.direction.rotate_around_axis(Vector::right(), Config::camera_rotate_angular_speed * dt);
+	else if (keys[SDL_SCANCODE_S])
+		camera.direction.rotate_around_axis(Vector::right(), -Config::camera_rotate_angular_speed * dt);
+
+	if (keys[SDL_SCANCODE_COMMA])
+		camera.base_point -= camera.direction * Config::camera_move_speed * dt;
+	else if (keys[SDL_SCANCODE_PERIOD])
+		camera.base_point += camera.direction * Config::camera_move_speed * dt;
+}
 
 static void process_keydown (const SDL_KeyboardEvent& event, const fp_t dt)
 {
@@ -206,22 +228,6 @@ static void process_keydown (const SDL_KeyboardEvent& event, const fp_t dt)
 		
 		case SDLK_LEFTBRACKET:
 			player->set_velocity(Vector(0, 0, Config::player_speed));
-		break;
-
-		case SDLK_a:
-			camera_target += Vector(-Config::camera_rotate_speed, 0, 0) * dt;
-		break;
-
-		case SDLK_d:
-			camera_target += Vector(Config::camera_rotate_speed, 0, 0) * dt;
-		break;
-
-		case SDLK_w:
-			camera_target += Vector(0, Config::camera_rotate_speed, 0) * dt;
-		break;
-
-		case SDLK_s:
-			camera_target += Vector(0, -Config::camera_rotate_speed, 0) * dt;
 		break;
 	}
 }
@@ -305,6 +311,7 @@ static void main_loop ()
 			);
 	#endif
 
+		process_keys(keys, virtual_dt);
 		process_events(virtual_dt);
 
 		process_physics(virtual_dt);

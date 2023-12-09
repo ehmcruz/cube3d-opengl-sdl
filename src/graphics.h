@@ -100,7 +100,7 @@ protected:
 	OO_ENCAPSULATE_SCALAR(fp_t, w) // width
 
 	OO_ENCAPSULATE_SCALAR_INIT(fp_t, rotation_angle, 0)
-	OO_ENCAPSULATE_OBJ(Vector, rotation_vector)
+	OO_ENCAPSULATE_OBJ(Vector, rotation_axis)
 
 	std::array<Color, 8> colors;
 

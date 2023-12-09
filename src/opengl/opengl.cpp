@@ -335,7 +335,7 @@ void Renderer::draw_cube3d (const Cube3d& cube, const Vector& offset)
 	
 	if (cube.get_rotation_angle() != fp(0)) {
 		for (auto& p : points)
-			p = Mylib::Math::rotate_around_vector(p, cube.get_ref_rotation_vector(), cube.get_rotation_angle());
+			p.rotate_around_axis(cube.get_ref_rotation_axis(), cube.get_rotation_angle());
 	}
 
 #ifdef OPENGL_SOFTWARE_CALCULATE_MATRIX
@@ -439,6 +439,7 @@ void Renderer::setup_projection_matrix (const RenderArgs& args)
 	dprintln();
 	dprintln("camera position: ", args.world_camera_pos);
 	dprintln("camera target: ", args.world_camera_target);
+	dprintln("camera vector: ", args.world_camera_target - args.world_camera_pos);
 #endif
 }
 
