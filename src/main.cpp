@@ -52,6 +52,7 @@ namespace Config {
 	inline constexpr fp_t sleep_threshold = target_dt * 0.9;
 	inline constexpr bool sleep_to_save_cpu = true;
 	inline constexpr bool busy_wait_to_ensure_fps = true;
+	inline constexpr fp_t player_speed = 0.5;
 }
 
 // -------------------------------------------
@@ -72,11 +73,17 @@ class Object
 {
 protected:
 	OO_ENCAPSULATE_OBJ(Point, pos)
+	OO_ENCAPSULATE_OBJ(Vector, velocity)
 public:
 	virtual void render (const fp_t dt) = 0;
+
+	inline void process_physics (const fp_t dt)
+	{
+		this->pos += this->velocity * dt;
+	}
 };
 
-class ObjCube : public Object
+class ObjCube3d : public Object
 {
 protected:
 	OO_ENCAPSULATE_OBJ(Cube3d, cube)
@@ -87,8 +94,8 @@ public:
 
 		constexpr fp_t angular_velocity = Mylib::Math::degrees_to_radians(fp(360)) / fp(2);
 //dprintln("xxxxxxxx ", Mylib::Math::degrees_to_radians(fp(360)));
-		cube.set_rotation_vector(Vector { 1, 1, 0 });
-		cube.set_rotation_angle(cube.get_rotation_angle() + angular_velocity * dt);
+		cube.set_rotation_vector(Vector { 0.5, 1, 0 });
+		cube.set_rotation_angle_bounded(cube.get_rotation_angle() + angular_velocity * dt);
 
 		dprintln("cube rotation angle=", Mylib::Math::radians_to_degrees(cube.get_rotation_angle()));
 	}
@@ -97,6 +104,7 @@ public:
 // -------------------------------------------
 
 std::list<Object*> objects;
+Object *player = nullptr;
 
 // -------------------------------------------
 
@@ -118,8 +126,9 @@ static void init_objs ()
 {
 	renderer->set_background_color( { .r = 0.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f } );
 
-	ObjCube& obj_cube = *static_cast<ObjCube*>(objects.emplace_back(new ObjCube));
-	obj_cube.set_pos(Point(0, -0.35, -5.5));
+	ObjCube3d& obj_cube = *static_cast<ObjCube3d*>(objects.emplace_back(new ObjCube3d));
+	obj_cube.set_pos(Point(0, -0.35, -1));
+	obj_cube.set_velocity(Vector(0, 0, 0));
 	Cube3d& cube = obj_cube.get_ref_cube();
 	cube.set_w(fp(0.25));
 	cube.set_vertex_color(Cube3d::LeftBottomFront,    { .r = 0.0f, .g = 1.0f, .b = 0.0f, .a = 1.0f });
@@ -130,6 +139,7 @@ static void init_objs ()
 	cube.set_vertex_color(Cube3d::RightBottomBack,    { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f });
 	cube.set_vertex_color(Cube3d::LeftTopBack,        { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f });
 	cube.set_vertex_color(Cube3d::RightTopBack,       { .r = 1.0f, .g = 0.0f, .b = 0.0f, .a = 1.0f });
+	player = &obj_cube;
 
 #if 1
 	for (auto& c : cube.get_colors_ref())
@@ -147,8 +157,59 @@ static void render_objs (const fp_t dt)
 
 // -------------------------------------------
 
-static void process_keydown (SDL_KeyboardEvent& event)
+static void process_physics (const fp_t dt)
 {
+	for (auto *obj : objects)
+		obj->process_physics(dt);
+}
+
+// -------------------------------------------
+
+static void process_keydown (const SDL_KeyboardEvent& event)
+{
+	switch (event.keysym.sym) {
+		case SDLK_ESCAPE:
+			alive = false;
+		break;
+
+		case SDLK_LEFT:
+			player->set_velocity(Vector(-Config::player_speed, 0, 0));
+		break;
+
+		case SDLK_RIGHT:
+			player->set_velocity(Vector(Config::player_speed, 0, 0));
+		break;
+
+		case SDLK_UP:
+			player->set_velocity(Vector(0, Config::player_speed, 0));
+		break;
+
+		case SDLK_DOWN:
+			player->set_velocity(Vector(0, -Config::player_speed, 0));
+		break;
+
+		case SDLK_RIGHTBRACKET:
+			player->set_velocity(Vector(0, 0, -Config::player_speed));
+		break;
+		
+		case SDLK_LEFTBRACKET:
+			player->set_velocity(Vector(0, 0, Config::player_speed));
+		break;
+	}
+}
+
+static void process_keyup (const SDL_KeyboardEvent& event)
+{
+	switch (event.keysym.sym) {
+		case SDLK_LEFT:
+		case SDLK_RIGHT:
+		case SDLK_UP:
+		case SDLK_DOWN:
+		case SDLK_RIGHTBRACKET:
+		case SDLK_LEFTBRACKET:
+			player->set_velocity(Vector(0, 0, 0));
+		break;
+	}
 }
 
 // -------------------------------------------
@@ -165,6 +226,10 @@ void process_events ()
 			
 			case SDL_KEYDOWN:
 				process_keydown(event.key);
+			break;
+
+			case SDL_KEYUP:
+				process_keyup(event.key);
 			break;
 		}
 	}
@@ -215,6 +280,7 @@ static void main_loop ()
 		process_events();
 
 		renderer->setup_projection_matrix({});
+		process_physics(virtual_dt);
 		render_objs(virtual_dt);
 		renderer->render();
 

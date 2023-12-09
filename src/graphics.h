@@ -8,6 +8,7 @@
 #include <SDL.h>
 
 #include <cstring>
+#include <cmath>
 
 #include <string>
 #include <algorithm>
@@ -16,6 +17,7 @@
 #include <my-lib/std.h>
 #include <my-lib/macros.h>
 #include <my-lib/any.h>
+#include <my-lib/math.h>
 #include <my-lib/math-matrix.h>
 #include <my-lib/math-geometry.h>
 
@@ -112,6 +114,11 @@ public:
 	Cube3d ()
 		: Cube3d(0)
 	{
+	}
+
+	constexpr void set_rotation_angle_bounded (const fp_t angle) noexcept
+	{
+		this->rotation_angle = std::fmod(angle, Mylib::Math::degrees_to_radians(fp(360)));
 	}
 
 	void set_vertex_color (const PositionIndex i, const Color& color) noexcept
