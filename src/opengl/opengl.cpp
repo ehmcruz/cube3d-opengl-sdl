@@ -172,28 +172,28 @@ void ProgramTriangle::draw ()
 
 void ProgramTriangle::debug ()
 {
-	uint32_t n = this->triangle_buffer.get_vertex_buffer_used();
+	const uint32_t n = this->triangle_buffer.get_vertex_buffer_used();
 
 	for (uint32_t i=0; i<n; i++) {
-		Vertex *v = this->triangle_buffer.get_vertex(i);
+		const Vertex& v = this->triangle_buffer.get_vertex(i);
 
 		if ((i % 3) == 0)
 			dprintln();
 
 		dprintln("vertex[", i,
-			"] x=", v->local_pos.x,
-			" y=", v->local_pos.y,
-			" z=", v->local_pos.z,
+			"] x=", v.local_pos.x,
+			" y=", v.local_pos.y,
+			" z=", v.local_pos.z,
 		#ifdef OPENGL_SOFTWARE_CALCULATE_MATRIX
 			" w=", v->local_pos.w,
 		#endif
-			" offset_x=", v->offset.x,
-			" offset_y=", v->offset.y,
-			" offset_z=", v->offset.z,
-			" r=", v->color.r,
-			" g=", v->color.g,
-			" b=", v->color.b,
-			" a=", v->color.a
+			" offset_x=", v.offset.x,
+			" offset_y=", v.offset.y,
+			" offset_z=", v.offset.z,
+			" r=", v.color.r,
+			" g=", v.color.g,
+			" b=", v.color.b,
+			" a=", v.color.a
 		);
 	}
 }
@@ -365,7 +365,7 @@ void Renderer::draw_cube3d (const Cube3d& cube, const Vector& offset)
 	constexpr uint32_t n_triangles = 12; // 6 faces * 2 triangles per face
 	constexpr uint32_t n_vertices = n_triangles * 3;
 
-	ProgramTriangle::Vertex *vertices = this->program_triangle->alloc_vertices(n_vertices);
+	std::span<ProgramTriangle::Vertex> vertices = this->program_triangle->alloc_vertices(n_vertices);
 	uint32_t i = 0;
 
 #ifndef OPENGL_SOFTWARE_CALCULATE_MATRIX

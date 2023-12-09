@@ -13,6 +13,7 @@
 #include <cstring>
 
 #include <string>
+#include <span>
 
 #include <my-lib/std.h>
 #include <my-lib/macros.h>
@@ -73,7 +74,7 @@ class VertexBuffer
 protected:
 	uint32_t vertex_buffer_capacity;
 	
-	OO_ENCAPSULATE_PTR(T*, vertex_buffer)
+	OO_ENCAPSULATE_PTR_INIT(T*, vertex_buffer, nullptr)
 	OO_ENCAPSULATE_SCALAR_READONLY(uint32_t, vertex_buffer_used)
 
 	void realloc (const uint32_t target_capacity)
@@ -105,16 +106,18 @@ public:
 
 	~VertexBuffer ()
 	{
-		if (this->vertex_buffer != nullptr)
+		if (this->vertex_buffer != nullptr) {
 			delete[] this->vertex_buffer;
+			this->vertex_buffer = nullptr;
+		}
 	}
 
-	inline T* get_vertex (const uint32_t i)
+	inline T& get_vertex (const uint32_t i)
 	{
-		return (this->vertex_buffer + i);
+		return *(this->vertex_buffer + i);
 	}
 
-	inline T* alloc_vertices (const uint32_t n)
+	inline std::span<T> alloc_vertices (const uint32_t n)
 	{
 		const uint32_t free_space = this->vertex_buffer_capacity - this->vertex_buffer_used;
 
@@ -124,7 +127,7 @@ public:
 		T *vertices = this->vertex_buffer + this->vertex_buffer_used;
 		this->vertex_buffer_used += n;
 
-		return vertices;
+		return std::span<T>{vertices, n};
 	}
 
 	inline void clear ()
@@ -174,7 +177,7 @@ public:
 		this->triangle_buffer.clear();
 	}
 
-	inline Vertex* alloc_vertices (const uint32_t n)
+	inline std::span<ProgramTriangle::Vertex> alloc_vertices (const uint32_t n)
 	{
 		return this->triangle_buffer.alloc_vertices(n);
 	}
