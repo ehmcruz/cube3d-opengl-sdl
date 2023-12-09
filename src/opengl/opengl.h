@@ -72,10 +72,9 @@ template <typename T, int grow_factor=4096>
 class VertexBuffer
 {
 protected:
-	uint32_t vertex_buffer_capacity;
-	
 	OO_ENCAPSULATE_PTR_INIT(T*, vertex_buffer, nullptr)
-	OO_ENCAPSULATE_SCALAR_READONLY(uint32_t, vertex_buffer_used)
+	OO_ENCAPSULATE_SCALAR_INIT_READONLY(uint32_t, vertex_buffer_used, 0)
+	OO_ENCAPSULATE_SCALAR_INIT_READONLY(uint32_t, vertex_buffer_capacity, 0)
 
 	void realloc (const uint32_t target_capacity)
 	{
@@ -112,7 +111,7 @@ public:
 		}
 	}
 
-	inline T& get_vertex (const uint32_t i)
+	inline T& get_vertex (const uint32_t i) noexcept
 	{
 		return *(this->vertex_buffer + i);
 	}
@@ -130,7 +129,7 @@ public:
 		return std::span<T>{vertices, n};
 	}
 
-	inline void clear ()
+	inline void clear () noexcept
 	{
 		this->vertex_buffer_used = 0;
 	}
